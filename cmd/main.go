@@ -11,8 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/priyansh32/rbac_oauth/resource_server/internal/db"
-	"github.com/priyansh32/rbac_oauth/resource_server/internal/handler"
-	auth "github.com/priyansh32/rbac_oauth/resource_server/pkg/middleware"
+	"github.com/priyansh32/rbac_oauth/resource_server/internal/handlers/auth"
+	"github.com/priyansh32/rbac_oauth/resource_server/internal/handlers/resource"
+	auth_middleware "github.com/priyansh32/rbac_oauth/resource_server/pkg/middleware"
 )
 
 func main() {
@@ -33,14 +34,21 @@ func main() {
 	}
 
 	// Apply RBAC middleware to all routes
-	r.Use(auth.RBACMiddleware(opaPolicy))
+	r.Use(auth_middleware.RBACMiddleware(opaPolicy))
 
 	// Define routes
-	r.GET("/api/users/:id", handler.GetUserHandler)
-	r.GET("/api/documents/:id", handler.GetDocumentHandler)
-	r.POST("/api/documents", handler.CreateDocumentHandler)
-	r.PUT("/api/documents/:id", handler.UpdateDocumentHandler)
-	r.DELETE("/api/documents/:id", handler.DeleteDocumentHandler)
+	r.GET("/api/users/:id", resource.GetUserHandler)
+	r.GET("/api/documents/:id", resource.GetDocumentHandler)
+	r.POST("/api/documents", resource.CreateDocumentHandler)
+	r.PUT("/api/documents/:id", resource.UpdateDocumentHandler)
+	r.DELETE("/api/documents/:id", resource.DeleteDocumentHandler)
+
+	// Auth Routes
+	r.POST("/api/register/client")
+
+	r.GET("/auth/authorize", auth.Authorize)
+	r.POST("/auth/token", auth.Token)
+	r.POST("/auth/revoke")
 
 	// Run the server
 	if err := r.Run(":8080"); err != nil {

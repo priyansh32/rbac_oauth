@@ -1,8 +1,9 @@
-package auth
+package auth_middleware
 
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,7 @@ func RBACMiddleware(opaPolicy string) gin.HandlerFunc {
 		tokenString = tokenString[len("Bearer "):]
 
 		// Verify token (replace "your-secret-key" with your actual secret key)
-		token, err := verifyToken(tokenString, []byte("your-secret-key"))
+		token, err := verifyToken(tokenString, []byte(os.Getenv("ACCESS_TOKEN_SECRET")))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORISED: INVALID TOKEN"})
 			c.Abort()
@@ -93,21 +94,4 @@ func RBACMiddleware(opaPolicy string) gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// verifyToken verifies the JWT token
-func verifyToken(tokenString string, secretKey []byte) (*jwt.Token, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, fmt.Errorf("UNEXPECTED SIGNING METHOD: %v", token.Header["alg"])
-	}
-
-	return token, nil
 }
