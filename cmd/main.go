@@ -33,22 +33,34 @@ func main() {
 		panic(err)
 	}
 
-	// Apply RBAC middleware to all routes
-	r.Use(auth_middleware.RBACMiddleware(opaPolicy))
+	// Load HTML templates
+	r.LoadHTMLGlob("templates/*") // Make sure your templates are in the "templates" directory
 
-	// Define routes
-	r.GET("/api/users/:id", resource.GetUserHandler)
-	r.GET("/api/documents/:id", resource.GetDocumentHandler)
-	r.POST("/api/documents", resource.CreateDocumentHandler)
-	r.PUT("/api/documents/:id", resource.UpdateDocumentHandler)
-	r.DELETE("/api/documents/:id", resource.DeleteDocumentHandler)
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Hello World!",
+		})
+	})
 
-	// Auth Routes
-	r.POST("/api/register/client")
+	authRoutes := r.Group("/auth")
+	{
+		// r.POST("/api/register/client")
+		authRoutes.GET("/authorize", auth.AuthorizeGET)
+		authRoutes.POST("/authorize", auth.AuthorizePOST)
+		authRoutes.POST("/token", auth.Token)
+		authRoutes.POST("/revoke")
+	}
 
-	r.GET("/auth/authorize", auth.Authorize)
-	r.POST("/auth/token", auth.Token)
-	r.POST("/auth/revoke")
+	// RBAC-protected Routes with RBAC middleware
+	rbacProtectedRoutes := r.Group("/api")
+	rbacProtectedRoutes.Use(auth_middleware.RBACMiddleware(opaPolicy))
+	{
+		rbacProtectedRoutes.GET("/users/:id", resource.GetUserHandler)
+		rbacProtectedRoutes.GET("/documents/:id", resource.GetDocumentHandler)
+		rbacProtectedRoutes.POST("/documents", resource.CreateDocumentHandler)
+		rbacProtectedRoutes.PUT("/documents/:id", resource.UpdateDocumentHandler)
+		rbacProtectedRoutes.DELETE("/documents/:id", resource.DeleteDocumentHandler)
+	}
 
 	// Run the server
 	if err := r.Run(":8080"); err != nil {

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/priyansh32/rbac_oauth/resource_server/internal/db"
@@ -14,12 +15,6 @@ type Client struct {
 	Secret      string `json:"secret"`
 	Role        string `json:"role"`
 	RedirectURI string `json:"redirect_uri"`
-}
-
-// Parse username and password from the request body
-var loginCredentials struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
 }
 
 func RegisterClient(c *gin.Context) {
@@ -61,8 +56,7 @@ func RegisterClient(c *gin.Context) {
 
 }
 
-// it should redirect back to the client with the authorization code
-func Authorize(c *gin.Context) {
+func AuthorizeGET(c *gin.Context) {
 	clientID := c.Query("client_id")
 	redirectURI := c.Query("redirect_uri")
 	role := c.Query("role")
@@ -96,23 +90,76 @@ func Authorize(c *gin.Context) {
 		return
 	}
 
-	if err := c.ShouldBindJSON(&loginCredentials); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+	// Render login page
+	c.HTML(http.StatusOK, "login.html", gin.H{
+		"client_id":      clientID,
+		"redirect_uri":   redirectURI,
+		"role":           role,
+		"code_challenge": code_challenge,
+	})
+}
+
+// it should redirect back to the client with the authorization code
+func AuthorizePOST(c *gin.Context) {
+	clientID := c.Query("client_id")
+	redirectURI := c.Query("redirect_uri")
+	role := c.Query("role")
+	code_challenge := c.Query("code_challenge")
+	// method is always S256 for simplicity
+
+	// Retrieve client from database
+	var client Client
+
+	err := db.DBClient.QueryRow("SELECT id, secret, role, redirect_uri FROM clients WHERE id=?", clientID).Scan(&client.ID, &client.Secret, &client.Role, &client.RedirectURI)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid client",
+		})
 		return
 	}
+
+	// Check if redirect URI matches
+	if client.RedirectURI != redirectURI {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid redirect URI",
+		})
+		return
+	}
+
+	// Check if role matches
+	if client.Role != role {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid role",
+		})
+		return
+	}
+
+	// Parse username and password from the request body
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	// if err := c.ShouldBindJSON(&loginCredentials); err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+	// 	return
+	// }
 
 	// Retrieve user from the database based on the provided username
 	var password_hash string
 	var user_id int
-	err = db.DBClient.QueryRow("SELECT id, password_hash FROM users WHERE username = ?", loginCredentials.Username).Scan(&user_id, &password_hash)
+	err = db.DBClient.QueryRow("SELECT id, password_hash FROM users WHERE username = ?", username).Scan(&user_id, &password_hash)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_grant"})
+		// if error is no rows found
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Wrong Username or Password"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		}
 		return
 	}
 
 	// Verify the hashed password
-	if !verifyhash(loginCredentials.Password, password_hash) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_grant"})
+	if !verifyhash(password, password_hash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Wrong Username or Password"})
 		return
 	}
 

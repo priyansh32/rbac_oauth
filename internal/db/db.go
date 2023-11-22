@@ -87,7 +87,7 @@ func InsertClient(clientID, secret, role, redirectURI string) error {
 }
 
 func InsertAuthorizationCode(code, client_id string, user_id int, code_challenge string) error {
-	_, err := DBClient.Exec("INSERT INTO authorization_codes (code, client_id, user_id, code_challenge) VALUES (?, ?)", code, client_id, user_id, code_challenge)
+	_, err := DBClient.Exec("INSERT INTO authorization_codes (code, client_id, user_id, code_challenge) VALUES (?, ?, ?, ?)", code, client_id, user_id, code_challenge)
 	if err != nil {
 		return err
 	}

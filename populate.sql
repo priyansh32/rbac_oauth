@@ -1,7 +1,7 @@
 -- Create a table for users
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username VARCHAR(50) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL
 );
@@ -168,3 +168,24 @@ VALUES (
         "The Room of Requirement",
         "A guide to the magical room that transforms itself to suit the needs of the seeker."
     );
+CREATE TABLE clients (
+    id varchar(64) PRIMARY KEY,
+    secret VARCHAR(64) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    redirect_uri text NOT NULL
+);
+INSERT INTO clients (id, secret, role, redirect_uri)
+VALUES (
+        "laama",
+        "secretkeythis",
+        "editor",
+        "localhost:3000/auth/callback"
+    );
+CREATE TABLE authorization_codes (
+    code VARCHAR(64) PRIMARY KEY,
+    client_id VARCHAR(64) NOT NULL,
+    user_id VARCHAR(64) NOT NULL,
+    code_challenge VARCHAR(64) NOT NULL,
+    FOREIGN KEY (client_id) REFERENCES clients(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);

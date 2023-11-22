@@ -5,7 +5,7 @@
             "previewLimit": 50,
             "driver": "SQLite",
             "name": "rbac",
-            "database": "${workspaceFolder:resource_server}/foo.db"
+            "database": "${workspaceFolder:rbac_oauth}/foo.db"
         }
     ]
 }

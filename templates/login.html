@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+
+<body>
+    <h2>Login</h2>
+    <p>Provide '{{.role}}' role to '{{.client_id}}'</p>
+    <form
+        action="/auth/authorize?client_id={{.client_id}}&redirect_uri={{.redirect_uri}}&role={{.role}}&code_challenge={{.code_challenge}}"
+        method="post">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br>
+        <input type="hidden" name="client_id" value="{{.ClientID}}">
+        <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}">
+        <input type="hidden" name="role" value="{{.Role}}">
+        <input type="hidden" name="code_challenge" value="{{.CodeChallenge}}">
+        <input type="submit" value="Authorize">
+    </form>
+</body>
+
+</html>
