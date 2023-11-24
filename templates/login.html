@@ -5,25 +5,115 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        p {
+            text-align: center;
+            color: #555;
+        }
+
+        form {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+
+        input[type="submit"]:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        input[type="checkbox"] {
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+
+        #agreeCheckbox {
+            width: auto;
+        }
+    </style>
     <title>Login</title>
 </head>
 
 <body>
-    <h2>Login</h2>
-    <p>Provide '{{.role}}' role to '{{.client_id}}'</p>
+    <h2>Resource Owner Authentication</h2>
+    <!-- <p>Provide '{{.role}}' role to '{{.client_id}}'</p> -->
+    <p>
+        <span style="font-weight: bold;">{{.client_id}}</span> is requesting the <span
+            style="font-weight: bold;">{{.role}}</span> role to your resources.<br>
+    </p>
     <form
         action="/auth/authorize?client_id={{.client_id}}&redirect_uri={{.redirect_uri}}&role={{.role}}&code_challenge={{.code_challenge}}"
         method="post">
+        <p>
+            Enter your credentials to continue.
+        </p>
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required><br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required><br>
-        <input type="hidden" name="client_id" value="{{.ClientID}}">
-        <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}">
-        <input type="hidden" name="role" value="{{.Role}}">
-        <input type="hidden" name="code_challenge" value="{{.CodeChallenge}}">
-        <input type="submit" value="Authorize">
+        <label>
+            <input type="checkbox" id="agreeCheckbox" required>
+            I agree to provide the {{.role}} role to {{.client_id}}
+        </label><br>
+
+        <input type="submit" value="Authorize" id="submitButton" disabled>
     </form>
+    <script>
+        const agreeCheckbox = document.getElementById('agreeCheckbox');
+        const submitButton = document.getElementById('submitButton');
+
+        submitButton.disabled = !agreeCheckbox.checked;
+
+        agreeCheckbox.addEventListener('change', function () {
+            submitButton.disabled = !agreeCheckbox.checked;
+        });
+    </script>
 </body>
 
 </html>

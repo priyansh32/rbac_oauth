@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,9 @@ func main() {
 			"message": "Hello World!",
 		})
 	})
+
+	// CORS
+	r.Use(cors.Default())
 
 	authRoutes := r.Group("/auth")
 	{

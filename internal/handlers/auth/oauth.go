@@ -190,8 +190,8 @@ func Token(c *gin.Context) {
 	codeVerifier := c.PostForm("code_verifier")
 
 	// Retrieve authorization code from database
-	var client_id, user_id int
-	var role, code_challenge string
+	var user_id int
+	var client_id, role, code_challenge string
 	err := db.DBClient.QueryRow("SELECT client_id, role, user_id, code_challenge FROM authorization_codes inner join clients on authorization_codes.client_id = clients.id WHERE code=?", code).Scan(&client_id, &role, &user_id, &code_challenge)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

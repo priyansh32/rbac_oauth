@@ -8,6 +8,8 @@ require (
 	github.com/open-policy-agent/opa v0.58.0
 )
 
+require github.com/gin-contrib/cors v1.4.0
+
 require (
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
