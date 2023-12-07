@@ -176,10 +176,10 @@ CREATE TABLE clients (
 );
 INSERT INTO clients (id, secret, role, redirect_uri)
 VALUES (
-        "laama",
+        "alpha",
         "secretkeythis",
         "editor",
-        "localhost:3000/auth/callback"
+        "http://localhost:5500/auth/callback/"
     );
 CREATE TABLE authorization_codes (
     code VARCHAR(64) PRIMARY KEY,
