@@ -26,10 +26,5 @@
 --     FOREIGN KEY (client_id) REFERENCES clients(id),
 --     FOREIGN KEY (user_id) REFERENCES users(id)
 -- );
-SELECT client_id,
-    role,
-    user_id,
-    code_challenge
-FROM authorization_codes
-    inner join clients on authorization_codes.client_id = clients.id
-WHERE code = "znPAJwnwGFBpUmG6zKME_G2iz3mO15Ru5Wls71TtXzw=";
+-- truncate a table in sqlite
+DELETE FROM authorization_codes;

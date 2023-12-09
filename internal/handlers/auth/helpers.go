@@ -37,8 +37,8 @@ func hasher(key string) string {
 
 func generateAccessToken(userID int, role string) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
+		"sub":  userID,
+		"role": role,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessToken, err := token.SignedString([]byte(os.Getenv("ACCESS_TOKEN_SECRET")))

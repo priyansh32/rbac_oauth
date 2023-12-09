@@ -1,15 +1,11 @@
 package auth_middleware
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/priyansh32/rbac_oauth/resource_server/internal/db"
-	"github.com/priyansh32/rbac_oauth/resource_server/internal/rbac"
 )
 
 var actions = map[string]string{
@@ -19,67 +15,85 @@ var actions = map[string]string{
 	"DELETE": "delete",
 }
 
+// TokenToContextMiddleware extracts token claims and adds them to the context.
+func TokenToContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString, err := extractTokenFromHeader(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED: " + err.Error()})
+			c.Abort()
+			return
+		}
+
+		token, err := verifyToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED: " + err.Error()})
+			c.Abort()
+			return
+		}
+
+		claims, err := extractUserClaims(token)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "INTERNAL SERVER ERROR: " + err.Error()})
+			c.Abort()
+			return
+		}
+
+		// Add token claims to context
+		c.Set("Claims", claims)
+
+		// Proceed to the next middleware or handler
+		c.Next()
+	}
+}
+
 // RBACMiddleware enforces RBAC policies based on OPA.
 func RBACMiddleware(opaPolicy string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
-
-		// if header is not present
-		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORISED: TOKEN MISSING"})
+		claims, exists := c.Get("Claims")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED: TOKEN CLAIMS MISSING"})
 			c.Abort()
 			return
 		}
 
-		// Assuming the token is in the format "Bearer <token>"
-		tokenString = tokenString[len("Bearer "):]
+		claimsMap, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "INTERNAL SERVER ERROR: 1"})
+			c.Abort()
+			return
+		}
 
-		// Verify token (replace "your-secret-key" with your actual secret key)
-		token, err := verifyToken(tokenString, []byte(os.Getenv("ACCESS_TOKEN_SECRET")))
+		userRole, err := extractUserRole(claimsMap)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORISED: INVALID TOKEN"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "PAYLOAD ERROR: 2"})
 			c.Abort()
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "INTERNAL SERVER ERROR"})
-			c.Abort()
-			return
-		}
-
-		userRole, ok := claims["role"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "PAYLOAD ERROR"})
-			c.Abort()
-			return
-		}
-
-		owner, resource_type, err := db.GetResourceOwnerAndType(c.Param("id"))
+		owner, resourceType, err := getResourceOwnerAndType(c)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "INTERNAL SERVER ERROR"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "INTERNAL SERVER ERROR: 1"})
 			c.Abort()
 			return
 		}
 
-		fmt.Print(owner, " ", claims["sub"], " ", resource_type)
+		debugPrint(owner, claimsMap["sub"], resourceType)
 
-		sub, ok := claims["sub"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "PAYLOAD ERROR"})
+		sub, err := extractSubject(claimsMap)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "PAYLOAD ERROR: 1"})
 			c.Abort()
 			return
 		}
 
 		if owner != sub {
-			c.JSON(http.StatusForbidden, gin.H{"error": "JWT SUBJET NOT VALID FOR REQUESTED RESORCE"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "JWT SUBJECT NOT VALID FOR REQUESTED RESOURCE"})
 			c.Abort()
 			return
 		}
 
-		// Check RBAC using OPA
-		allowed, err := rbac.CheckRBAC(opaPolicy, userRole, actions[c.Request.Method], strings.ToLower(resource_type))
+		allowed, err := checkRBAC(opaPolicy, userRole, c.Request.Method, strings.ToLower(resourceType))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ACCESS DENIED"})
 			c.Abort()
@@ -87,11 +101,12 @@ func RBACMiddleware(opaPolicy string) gin.HandlerFunc {
 		}
 
 		if !allowed {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "FORBIDDEN"})
 			c.Abort()
 			return
 		}
 
+		// Proceed to the next middleware or handler
 		c.Next()
 	}
 }

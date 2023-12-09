@@ -43,12 +43,17 @@ func main() {
 		})
 	})
 
-	// CORS
-	r.Use(cors.Default())
+	// CORS allow authorization header
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
+	config.AllowHeaders = []string{"Authorization"}
+
+	r.Use(cors.New(config))
 
 	authRoutes := r.Group("/auth")
 	{
-		// r.POST("/api/register/client")
+		authRoutes.POST("/api/register_client", auth.RegisterClient)
 		authRoutes.GET("/authorize", auth.AuthorizeGET)
 		authRoutes.POST("/authorize", auth.AuthorizePOST)
 		authRoutes.POST("/token", auth.Token)
@@ -57,6 +62,8 @@ func main() {
 
 	// RBAC-protected Routes with RBAC middleware
 	rbacProtectedRoutes := r.Group("/api")
+	rbacProtectedRoutes.Use(auth_middleware.TokenToContextMiddleware())
+	rbacProtectedRoutes.GET("/documents", resource.GetUserDocumentsHandler)
 	rbacProtectedRoutes.Use(auth_middleware.RBACMiddleware(opaPolicy))
 	{
 		rbacProtectedRoutes.GET("/users/:id", resource.GetUserHandler)
